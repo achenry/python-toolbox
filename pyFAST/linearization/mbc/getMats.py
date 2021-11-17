@@ -50,10 +50,10 @@ def findBladeTriplets_EDstate(rotFrame,Desc):
                             Triplets.append(Tmp); # these are the indices for state triplets in the rotating frame
                             break
     
-    return Triplets,NTriplets;
+    return Triplets, NTriplets;
 
 
-def findBladeTriplets(rotFrame,Desc, verbose=True):
+def findBladeTriplets(rotFrame, Desc, verbose=True):
 
     # Find the number of, and indices for, triplets in the rotating frame:
     chkStr = ['[Bb]lade \d', '[Bb]lade [Rr]oot \d', 'BD_\d', '[Bb]\d', '[Bb]lade\d', 'PitchBearing\d', '\d']
@@ -65,31 +65,37 @@ def findBladeTriplets(rotFrame,Desc, verbose=True):
         #if(i>=67):
             #print(rotFrame[i])
         if rotFrame[i]:          # this is in the rotating frame
-            Tmp = -1*np.ones(3);
+            Tmp = -1 * np.ones(3); # constant 3
             foundTriplet = False;
             foundIt = False;
             for chk in chkStr:
-                BldNoCol = re.search(chk,Desc[i]);
-                if BldNoCol!=None:
-                    foundIt = True;
+                BldNoCol = re.search(chk, Desc[i]);
+                if BldNoCol != None:
+                    foundIt = True
 
-                    Bldstr=BldNoCol.group()
+                    Bldstr = BldNoCol.group()
+
+
                     # create another regular expression to find the
                     # exact match on a different blade:
-                    strng = re.split(Bldstr,Desc[i],1); #this should return the strings before and after the match
+                    strng = re.split(Bldstr, Desc[i], 1) # this should return the strings before and after the match
                     #print(strng[1])
 
                     
-                    FirstStr = strng[0] + Bldstr[:len(Bldstr)-1] + '.'
+                    FirstStr = strng[0] + Bldstr[:len(Bldstr) - 1] + '.'
+
                     checkThisStr = FirstStr + strng[1]
                     
                     #we need to get rid of the special characters that
                     #may exist in Desc{}:
-                    checkThisStr=checkThisStr.replace(')','\)').replace('(', '\(').replace('^','\^')
+                    checkThisStr = checkThisStr.replace(')','\)').replace('(', '\(').replace('^','\^')
 
-                    k = int(Bldstr[len(Bldstr)-1])
+                    k = int(Bldstr[len(Bldstr) - 1])
+                    if k > 3: # TODO if not a triplet quantity
+                        foundIt = False
+                        continue
                     #print(Bldstr[len(Bldstr)-1], checkThisStr)
-                    Tmp[k-1] = int(i);
+                    Tmp[k - 1] = int(i);
                     #print(Tmp,k,i,len(rotFrame),foundIt)
                     #exit()
                     break
@@ -98,18 +104,20 @@ def findBladeTriplets(rotFrame,Desc, verbose=True):
             
             # find the other match values
             if foundIt:
-                for j in range((i+1),len(rotFrame)):           # loop through all remaining control inputs
+                for j in range((i + 1), len(rotFrame)):           # loop through all remaining control inputs
                     #print(i, j)
                     if rotFrame[j]:                       # this is in the rotating frame
                         BldNoCol = re.search(checkThisStr, Desc[j])
-                        if BldNoCol!=None:
-                            Num = re.search(FirstStr,Desc[j]).group();
+                        if BldNoCol != None:
+                            Num = re.search(FirstStr, Desc[j]).group();
                             #Num = regexp(Desc{j},FirstStr,'match'); # match all but the blade number
                             k = int(Num[len(Num)-1]);
-                            Tmp[k-1] = int(j);                             # save the indices for the remaining blades
-                            #TmpTmp=Tmp+1
-                            #print(BldNoCol.group(),i,j,k)
-                            if ( (Tmp>-1).all() ):                         # true if all the elements of Tmp are nonzero; thus, we found a triplet of rotating indices
+                            if k > 3:
+                                continue
+                            Tmp[k - 1] = int(j);                             # save the indices for the remaining blades
+                            # TmpTmp=Tmp+1
+                            # print(BldNoCol.group(),i,j,k)
+                            if ((Tmp > -1).all()):                         # true if all the elements of Tmp are nonzero; thus, we found a triplet of rotating indices
                                 foundTriplet = True;
                                 
                                 Triplets.append(Tmp);        # these are the indices for control input triplets in the rotating frame
@@ -118,12 +126,12 @@ def findBladeTriplets(rotFrame,Desc, verbose=True):
 
                                 # we'll set rotFrame to false so that we don't have to check the found channels again; also allows us to throw error if we have a rotating channel that doesn't have a unique match
                                 for idx in Tmp:
-                                    id=int(idx)
+                                    id = int(idx)
                                     rotFrame[id] = 0;
                                 
                                 break;
                 
-                if foundTriplet==False:
+                if foundTriplet == False:
                     if verbose:
                         print('Rotating channel "', i, Desc[i], '" does not form a unique blade triplet. Blade(s) not found: ', np.array(np.where(Tmp == -1))+1 )
             else:
@@ -586,14 +594,16 @@ def get_Mats(FileNames, verbose=True):
 
     # Find the indices for control input triplets in the rotating frame:
     if matData['NumInputs'] > 0:
-        matData['RotTripletIndicesCntrlInpt'], matData['n_RotTripletInputs'] = findBladeTriplets(data[0]['u_rotFrame'],matData['DescCntrlInpt'], verbose=verbose );
+        matData['RotTripletIndicesCntrlInpt'], matData['n_RotTripletInputs'] = \
+            findBladeTriplets(data[0]['u_rotFrame'],matData['DescCntrlInpt'], verbose=verbose );
     else:
         matData['RotTripletIndicesCntrlInpt'] = [];
         matData['n_RotTripletInputs'] = 0;
 
     # Find the indices for output measurement triplets in the rotating frame:
     if (matData['NumOutputs'] > 0 ):
-        matData['RotTripletIndicesOutput'], matData['n_RotTripletOutputs'] = findBladeTriplets(data[0]['y_rotFrame'],matData['DescOutput'], verbose=verbose );
+        matData['RotTripletIndicesOutput'], matData['n_RotTripletOutputs'] = \
+            findBladeTriplets(data[0]['y_rotFrame'], matData['DescOutput'], verbose=verbose );
     else:
         matData['RotTripletIndicesOutput'] = [];
         matData['n_RotTripletOutputs'] = 0;

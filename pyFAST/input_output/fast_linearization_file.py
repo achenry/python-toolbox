@@ -151,7 +151,7 @@ class FASTLinearizationFile(File):
         with open(self.filename,'w') as f:
             f.write(self.toString())
 
-    def short_descr(self,slist):
+    def short_descr(self, slist):
         def shortname(s):
             s=s.strip()
             s = s.replace('(m/s)'   , '_[m/s]'  );
